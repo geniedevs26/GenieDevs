@@ -223,8 +223,61 @@ async function adminPanel(){
   }else if(view==='payments'){
    box.innerHTML='<h2>Payment ledger</h2><p class="muted">Read-only records. A record is not considered a verified payment unless its status/verification fields confirm it.</p>'+table(['Created','Store','Purpose','Provider','Amount','Status','Verified'],payments.map(p=>'<tr><td>'+escapeHtml(new Date(p.created_at).toLocaleString())+'</td><td>'+escapeHtml(tn(p.tenant_id))+'</td><td>'+escapeHtml(p.purpose||'—')+'</td><td>'+escapeHtml(p.provider||'—')+'</td><td>'+escapeHtml(p.currency||'INR')+' '+(Number(p.amount_paise||0)/100).toLocaleString('en-IN',{minimumFractionDigits:2})+'</td><td>'+escapeHtml(p.status||'—')+'</td><td>'+escapeHtml(p.verified_at?new Date(p.verified_at).toLocaleString():'—')+'</td></tr>').join('')||'<tr><td colspan="7">No payment records found.</td></tr>');
   }else if(view==='users'){
-   box.innerHTML='<h2>Registered users & admin access</h2><p class="muted">Admin grants control access to this panel; deactivation does not delete the user account. Only users who already have an Auth account can be granted a role. Ask the user for their exact User ID from this list.</p>'+table(['Email','User ID','Registered','Last sign in','Platform role','Admin controls'],users.map(u=>{const g=admins.find(a=>a.user_id===u.user_id);return '<tr><td>'+escapeHtml(u.email||'—')+'</td><td><small>'+escapeHtml(u.user_id)+'</small></td><td>'+escapeHtml(new Date(u.created_at).toLocaleString())+'</td><td>'+escapeHtml(u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleString():'—')+'</td><td>'+escapeHtml(g?(g.role+(g.is_active?' · active':' · inactive')):'No admin grant')+'</td><td>'+(canManage?'<button class="btn outline" data-admin-user="'+u.user_id+'">'+(g?'Manage access':'Grant access')+'</button>':'Read only')+'</td></tr>';}).join('')||'<tr><td colspan="6">No registry records found.</td></tr>');
-   if(canManage)box.querySelectorAll('[data-admin-user]').forEach(b=>b.onclick=async()=>{const uid=b.dataset.adminUser,g=admins.find(a=>a.user_id===uid);const role=prompt('Choose role: admin or support. Type inactive to revoke panel access.',g?(g.is_active?g.role:'inactive'):'support');if(role===null)return;const choice=role.trim().toLowerCase();if(!['admin','support','inactive'].includes(choice))return note('Role must be admin, support, or inactive.','err');const active=choice!=='inactive',grantRole=active?choice:(g?.role||'support');if(!confirm((active?'Set role '+grantRole+' for ':'Deactivate platform access for ')+uid+'?'))return;b.disabled=true;const {error}=await db.rpc('manage_platform_admin',{p_target_user_id:uid,p_role:grantRole,p_is_active:active});if(error){note('Admin access update failed: '+error.message,'err');b.disabled=false;return;}note('Platform access updated. This does not create/delete the user account.','ok');loadView('users');});
+   box.innerHTML='<h2>User management & account safety</h2><p class="muted">Auth account actions run server-side and require active platform-admin verification. Passwords are never visible to admins. Suspended users are blocked from signing in; their stores are unpublished and suspended.</p><div class="field"><label for="userSearch">Search email or User ID</label><input id="userSearch" type="search" placeholder="Search registered users…"></div><div id="managedUsers"><p class="muted">Loading registered Auth accounts…</p></div><div id="userInspect"></div>';
+   const userHost=document.getElementById('managedUsers');
+   const renderManaged=(managedUsers)=>{
+    const q=(document.getElementById('userSearch').value||'').trim().toLowerCase();
+    const filtered=managedUsers.filter(u=>(u.email||'').toLowerCase().includes(q)||(u.user_id||'').toLowerCase().includes(q));
+    userHost.innerHTML=table(['User / account','Registered','Last sign in','Store / product / order counts','Platform role','Account actions'],filtered.map(u=>{
+     const stores=(u.stores||[]).map(t=>'<div><a target="_blank" rel="noopener" href="/store/'+encodeURIComponent(t.slug||'')+'">'+escapeHtml(t.business_name||t.slug||'Store without name')+'</a> <small>· '+(t.is_suspended?'Suspended':t.is_published?'Published':'Unpublished')+'</small></div>').join('')||'No stores';
+     const role=u.role?(u.role+(u.grant_active?' · active':' · inactive')):'No platform role';
+     const suspended=!!u.is_banned;
+     return '<tr><td><b>'+escapeHtml(u.email||'No email')+'</b><br><small>'+escapeHtml(u.user_id)+'</small><br><span class="pill" style="margin-top:5px;display:inline-block">'+(suspended?'SUSPENDED':'Active')+'</span></td><td>'+escapeHtml(u.created_at?new Date(u.created_at).toLocaleString():'—')+'</td><td>'+escapeHtml(u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleString():'Never')+'</td><td>'+stores+'<small>'+((u.stores||[]).length)+' store(s) · '+Number(u.product_count||0)+' product(s) · '+Number(u.order_count||0)+' order(s)</small></td><td>'+escapeHtml(role)+'</td><td><div class="admin-actions"><button class="btn outline" data-user-detail="'+escapeHtml(u.user_id)+'">Inspect</button><button class="btn '+(suspended?'primary':'danger')+'" data-user-ban="'+escapeHtml(u.user_id)+'" data-suspended="'+suspended+'">'+(suspended?'Restore account':'Suspend account')+'</button><button class="btn outline" data-user-reset="'+escapeHtml(u.user_id)+'">Send password reset</button><button class="btn danger" data-user-delete="'+escapeHtml(u.user_id)+'">Delete account</button></div></td></tr>';
+    }).join('')||'<tr><td colspan="6">No matching users.</td></tr>');
+    userHost.querySelectorAll('[data-user-detail]').forEach(b=>b.onclick=()=>{
+     const u=managedUsers.find(x=>x.user_id===b.dataset.userDetail);
+     const stores=(u.stores||[]).map(t=>'<div><b>'+escapeHtml(t.business_name||'Unnamed store')+'</b><br>Store URL: '+(t.slug?'<a target="_blank" rel="noopener" href="/store/'+encodeURIComponent(t.slug)+'">'+escapeHtml(location.origin+'/store/'+t.slug)+'</a>':'Not assigned')+'<br>Status: '+(t.is_suspended?'Suspended':t.is_published?'Published':'Unpublished')+'<br>Created: '+escapeHtml(t.created_at?new Date(t.created_at).toLocaleString():'—')+'</div>').join('')||'<div>No linked store records.</div>';
+     document.getElementById('userInspect').innerHTML='<h3>User profile · '+escapeHtml(u.email||u.user_id)+'</h3><div class="admin-detail"><div>Email<b>'+escapeHtml(u.email||'—')+'</b></div><div>User ID<b style="overflow-wrap:anywhere">'+escapeHtml(u.user_id)+'</b></div><div>Account status<b>'+(u.is_banned?'Suspended':'Active')+'</b></div><div>Email confirmed<b>'+escapeHtml(u.email_confirmed_at?new Date(u.email_confirmed_at).toLocaleString():'Not confirmed')+'</b></div><div>Registered<b>'+escapeHtml(u.created_at?new Date(u.created_at).toLocaleString():'—')+'</b></div><div>Last sign in<b>'+escapeHtml(u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleString():'Never')+'</b></div><div>Products / Orders<b>'+Number(u.product_count||0)+' / '+Number(u.order_count||0)+'</b></div><div>Platform role<b>'+escapeHtml(u.role?(u.role+(u.grant_active?' · active':' · inactive')):'None')+'</b></div></div><h3>Linked stores</h3><div class="admin-detail">'+stores+'</div><p class="muted">Password is intentionally not visible. Use “Send password reset” to let the user set a new password securely.</p>';
+    });
+    userHost.querySelectorAll('[data-user-ban]').forEach(b=>b.onclick=async()=>{
+     const id=b.dataset.userBan,was=b.dataset.suspended==='true';
+     const reason=was?'':prompt('Reason for suspending this account. The user’s stores will be unpublished too:','Policy violation under review');
+     if(!was&&(reason===null||reason.trim().length<5))return note('A clear suspension reason (at least 5 characters) is required.','err');
+     if(!confirm((was?'Restore sign-in access for this user?':'Suspend this user and unpublish/suspend their stores?')+' This action will be recorded in the audit log.'))return;
+     b.disabled=true;
+     const {data,error}=await db.functions.invoke('platform-user-management',{body:{action:was?'restore':'suspend',user_id:id,reason:reason||''}});
+     if(error||data?.error){note('Account action failed: '+(data?.error||error?.message||'Unknown error'),'err');b.disabled=false;return;}
+     note(was?'User sign-in access restored. Review store status separately before republishing.':'User suspended and linked stores unpublished/suspended.','ok');
+     await loadView('users');
+    });
+    userHost.querySelectorAll('[data-user-reset]').forEach(b=>b.onclick=async()=>{
+     const u=managedUsers.find(x=>x.user_id===b.dataset.userReset);
+     if(!confirm('Send a secure password-reset email to '+(u?.email||'this user')+'?'))return;
+     b.disabled=true;
+     const {data,error}=await db.functions.invoke('platform-user-management',{body:{action:'send-reset',user_id:b.dataset.userReset}});
+     if(error||data?.error){note('Password reset request failed: '+(data?.error||error?.message||'Unknown error'),'err');b.disabled=false;return;}
+     note(data?.message||'Password reset email requested. Confirm SMTP/email delivery is configured.','ok');b.disabled=false;
+    });
+    userHost.querySelectorAll('[data-user-delete]').forEach(b=>b.onclick=async()=>{
+     const u=managedUsers.find(x=>x.user_id===b.dataset.userDelete);
+     if(!confirm('PERMANENTLY DELETE '+(u?.email||b.dataset.userDelete)+'? This is irreversible. Accounts linked to stores/orders may be blocked to preserve records. Prefer Suspend for policy violations.'))return;
+     const phrase=prompt('Type DELETE to confirm permanent account deletion:');
+     if(phrase!=='DELETE')return;
+     b.disabled=true;
+     const {data,error}=await db.functions.invoke('platform-user-management',{body:{action:'delete',user_id:b.dataset.userDelete}});
+     if(error||data?.error){note('Account deletion blocked/failed: '+(data?.error||error?.message||'Unknown error'),'err');b.disabled=false;return;}
+     note('Account deleted.','ok');await loadView('users');
+    });
+   };
+   const {data:managedData,error:managedError}=await db.functions.invoke('platform-user-management',{body:{action:'list'}});
+   if(managedError||managedData?.error){
+    userHost.innerHTML='<div class="notice err">Could not load Auth users: '+escapeHtml(managedData?.error||managedError?.message||'Unknown error')+'. Check that the platform-user-management Edge Function is deployed and the current session is an active admin.</div>';
+   }else{
+    const managedUsers=managedData?.users||[];
+    renderManaged(managedUsers);
+    document.getElementById('userSearch').oninput=()=>renderManaged(managedUsers);
+    if(managedData?.truncated)note('Only the first 1,000 Auth accounts are shown. Add pagination before the account count exceeds this.','err');
+   }
   }else{
    const {data:logs,error:logErr}=await db.from('admin_audit_log').select('id,actor_user_id,action,target_type,target_id,details,created_at').order('created_at',{ascending:false}).limit(100);
    box.innerHTML='<h2>Support & audit trail</h2><p class="muted">Recent admin actions are logged when the audit table allows inserts. A support ticket inbox is not connected yet; this tab provides audit history for troubleshooting.</p>'+(logErr?'<div class="notice err">Audit log unavailable: '+escapeHtml(logErr.message)+'</div>':table(['Time','Action','Target','Details'],(logs||[]).map(l=>'<tr><td>'+escapeHtml(new Date(l.created_at).toLocaleString())+'</td><td>'+escapeHtml(l.action)+'</td><td>'+escapeHtml(l.target_type||'')+' '+escapeHtml(l.target_id||'')+'</td><td><pre style="white-space:pre-wrap">'+escapeHtml(JSON.stringify(l.details||{}))+'</pre></td></tr>').join('')||'<tr><td colspan="4">No audit events yet.</td></tr>'));
