@@ -267,7 +267,7 @@ async function adminPanel(){
     const q=(document.getElementById('userSearch').value||'').trim().toLowerCase();
     const filtered=managedUsers.filter(u=>(u.email||'').toLowerCase().includes(q)||(u.user_id||'').toLowerCase().includes(q));
     userHost.innerHTML=table(['Registered user','Registered','Last sign in','Store / product / order counts','Account actions'],filtered.map(u=>{
-     const stores=(u.stores||[]).map(t=>'<div><a target="_blank" rel="noopener" href="/store/'+encodeURIComponent(t.slug||'')+'">'+escapeHtml(t.business_name||t.slug||'Store without name')+'</a> <small>· '+(t.is_suspended?'Suspended':t.is_published?'Published':'Unpublished')+'</small></div>').join('')||'No stores';
+     const stores=(u.stores||[]).map(t=>'<div><a target="_blank" rel="noopener" href="/store/'+encodeURIComponent(t.slug||'')+'">'+escapeHtml(t.business_name||t.slug||'Store without name')+'</a> <small>· '+(t.is_archived?'Archived':t.is_suspended?'Suspended':t.is_published?'Published':'Unpublished')+'</small></div>').join('')||'No stores';
      const suspended=!!u.is_banned;
      return '<tr><td><b>'+escapeHtml(u.email||'No email')+'</b><br><small>'+escapeHtml(u.user_id)+'</small><br><span class="pill" style="margin-top:5px;display:inline-block">'+(suspended?'SUSPENDED':'Active')+'</span></td><td>'+escapeHtml(u.created_at?new Date(u.created_at).toLocaleString():'—')+'</td><td>'+escapeHtml(u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleString():'Never')+'</td><td>'+stores+'<small>'+((u.stores||[]).length)+' store(s) · '+Number(u.product_count||0)+' product(s) · '+Number(u.order_count||0)+' order(s)</small></td><td><div class="admin-actions"><button class="btn outline" data-user-detail="'+escapeHtml(u.user_id)+'">Open user details</button><button class="btn outline" data-user-edit="'+escapeHtml(u.user_id)+'">Edit user / store</button><button class="btn '+(suspended?'primary':'danger')+'" data-user-ban="'+escapeHtml(u.user_id)+'" data-suspended="'+suspended+'">'+(suspended?'Restore account':'Suspend account')+'</button><button class="btn outline" data-user-reset="'+escapeHtml(u.user_id)+'">Send password reset link</button><button class="btn danger" data-user-delete="'+escapeHtml(u.user_id)+'">Archive account</button></div></td></tr>';
     }).join('')||'<tr><td colspan="5">No matching registered users.</td></tr>');
@@ -297,7 +297,9 @@ async function adminPanel(){
      let business_name='',slug='',whatsapp='',package_type='',product_limit=10;
      if(firstStore){
       business_name=prompt('Store / business name:',firstStore.business_name||'');if(business_name===null)return;
+      if(business_name.trim().length<2)return note('Store name must contain at least 2 characters.','err');
       slug=prompt('Store URL slug (without /store/):',firstStore.slug||'');if(slug===null)return;
+      if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug.trim().toLowerCase()))return note('Store URL must use lowercase letters, numbers and hyphens only.','err');
       whatsapp=prompt('WhatsApp number (blank to clear):',firstStore.whatsapp_number||'');if(whatsapp===null)return;
       package_type=prompt('Package name:',firstStore.package_type||'Demo');if(package_type===null)return;
       const product_limit_text=prompt('Product limit (whole number):',String(firstStore.product_limit??10));if(product_limit_text===null)return;
