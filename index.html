@@ -125,7 +125,7 @@ function landing(){app.innerHTML=`
 
 }
 async function merchantLogin(){
- let passwordLinkError='';const authParams=new URLSearchParams(location.search);const authCode=authParams.get('code');if(authParams.get('reset')==='1'&&authCode){const {data:{session:existingSession}={}}=await db.auth.getSession();if(!existingSession){const {error:exchangeError}=await db.auth.exchangeCodeForSession(authCode);if(exchangeError)passwordLinkError=exchangeError.message;}history.replaceState({},document.title,'/login?reset=1');}
+ let passwordLinkError='';const authParams=new URLSearchParams(location.search);const authCode=authParams.get('code');if(db&&authParams.get('reset')==='1'&&authCode){const {data:{session:existingSession}={}}=await db.auth.getSession();if(!existingSession){const {error:exchangeError}=await db.auth.exchangeCodeForSession(authCode);if(exchangeError)passwordLinkError=exchangeError.message;}history.replaceState({},document.title,'/login?reset=1');}
  if(!db){app.innerHTML='<div class="panel center"><h1>Login unavailable</h1><p>Database connection is unavailable. Please try again.</p><a class="btn outline" href="/">Main website</a></div>';return;}
  const isPasswordSetup= new URLSearchParams(location.search).get('reset')==='1' || /type=(recovery|invite)/.test(location.hash);
  if(isPasswordSetup){
