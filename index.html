@@ -86,7 +86,7 @@ async function edgeFailureMessage(error,data){if(data?.error)return data.error;i
 let user=null,tenant=null,mode='signup';
 
 // Cashfree hosted checkout: the server creates the order and alone verifies payment.
-async async function startPlanCheckout(planName){
+async function startPlanCheckout(planName){
  const amounts={Basic:999,Standard:1999,Premium:2999};
  if(!db||!amounts[planName]){alert('Package checkout is unavailable.');return;}
  let {data:{session}={}}=await db.auth.getSession();
