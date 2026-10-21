@@ -72,7 +72,7 @@ body[data-theme="light"] .demo-qty button{background:#f5f6ff;border-color:#dce2f
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WCQ9Z6LG"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
-<header class="wrap"><nav class="nav"><a class="logo" href="/">Genie<span>Devs</span></a><div class="navlinks"><a class="hide-sm" href="/#features">Features</a><a class="hide-sm" href="/#pricing">Pricing</a><a href="/demo">Live demo</a><a href="/#support">Support</a><button id="themeToggle" class="btn outline" type="button" aria-label="Switch theme" title="Switch light/dark theme">☀️ Light</button><button id="navAuth" class="btn primary" type="button">Store Admin Login</button></div></nav></header>
+<header class="wrap"><nav class="nav"><a class="logo" href="/">Genie<span>Devs</span></a><div class="navlinks"><a class="hide-sm" href="/#features">Features</a><a class="hide-sm" href="/#pricing">Pricing</a><a href="/demo">Live demo</a><a href="/#support">Support</a><button id="themeToggle" class="btn outline" type="button" aria-label="Switch theme" title="Switch light/dark theme">☀️ Light</button></div></nav></header>
 <main id="app" class="wrap"><div class="panel center">Loading GenieDevs…</div></main>
 <footer class="wrap footer"><span>© <span id="year"></span> GenieDevs</span><span>Built for small businesses · <a href="https://formspree.io/f/xkjoakoe" target="_blank" rel="noopener">Support</a></span></footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -377,7 +377,7 @@ async function adminPanel(){
 }
 
 async function logout(){await db.auth.signOut();user=null;tenant=null;landing();window.scrollTo(0,0);}
-async function init(){const path=decodeURIComponent(location.pathname).replace(/\/+$/,'')||'/';if(path==='/admin'){await adminPanel();return;}if(path==='/login'){await merchantLogin();return;}if(path==='/demo'){demo();return;}if(path.startsWith('/store/')){if(!db){app.innerHTML='<div class="panel center"><h1>Could not connect</h1><p>Please refresh and try again.</p></div>';return;}await publicStore(path.split('/')[2]||'');return;}if(path!=='/'&&path!=='/index.html'){if(!db){app.innerHTML='<div class="panel center"><h1>Could not connect</h1><p>Please refresh and try again.</p></div>';return;}await publicStore(path.slice(1));return;}landing();document.getElementById('navAuth').onclick=()=>{location.href='/login';};}
+async function init(){const path=decodeURIComponent(location.pathname).replace(/\/+$/,'')||'/';if(path==='/admin'){await adminPanel();return;}if(path==='/login'){await merchantLogin();return;}if(path==='/demo'){demo();return;}if(path.startsWith('/store/')){if(!db){app.innerHTML='<div class="panel center"><h1>Could not connect</h1><p>Please refresh and try again.</p></div>';return;}await publicStore(path.split('/')[2]||'');return;}if(path!=='/'&&path!=='/index.html'){if(!db){app.innerHTML='<div class="panel center"><h1>Could not connect</h1><p>Please refresh and try again.</p></div>';return;}await publicStore(path.slice(1));return;}landing();}
 
 function setupTheme(){
 const saved=(()=>{try{return localStorage.getItem('geniedevs-theme')}catch{return null}})();
