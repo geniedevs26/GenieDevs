@@ -294,10 +294,14 @@ async function adminPanel(){
      if(firstStore){
       business_name=prompt('Store / business name:',firstStore.business_name||'');if(business_name===null)return;
       slug=prompt('Store URL slug (without /store/):',firstStore.slug||'');if(slug===null)return;
+      const whatsapp=prompt('WhatsApp number (blank to clear):',firstStore.whatsapp_number||'');if(whatsapp===null)return;
+      const package_type=prompt('Package name:',firstStore.package_type||'Demo');if(package_type===null)return;
+      const product_limit_text=prompt('Product limit (whole number):',String(firstStore.product_limit??10));if(product_limit_text===null)return;
+      const product_limit=Number(product_limit_text);if(!Number.isInteger(product_limit)||product_limit<0||product_limit>10000)return note('Product limit must be a whole number from 0 to 10000.','err');
      }
-     if(!confirm('Save account email'+(firstStore?' and store name / URL':'')+'? This will not delete products or orders.'))return;
+     if(!confirm('Save account email'+(firstStore?' and store settings':'')+'? This will not delete products or orders.'))return;
      b.disabled=true;
-     const {data,error}=await db.functions.invoke('platform-user-management',{body:{action:'update-user',user_id:u.user_id,email:email.trim(),...(firstStore?{store_id:firstStore.id,business_name:business_name.trim(),slug:slug.trim().toLowerCase()}: {})}});
+     const {data,error}=await db.functions.invoke('platform-user-management',{body:{action:'update-user',user_id:u.user_id,email:email.trim(),...(firstStore?{store_id:firstStore.id,business_name:business_name.trim(),slug:slug.trim().toLowerCase(),whatsapp_number:whatsapp,package_type,product_limit}: {})}});
      if(error||data?.error){note('User/store update failed: '+(data?.error||error?.message||'Unknown error'),'err');b.disabled=false;return;}
      note('User/store details updated. If the email provider requires verification, the new email may need confirmation.','ok');
      await loadView('users');
