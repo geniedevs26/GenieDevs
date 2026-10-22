@@ -96,6 +96,9 @@ async function startPlanCheckout(planName){
  }
  await launchCashfreeCheckout(planName);
 }
+// Inline pricing buttons execute in the global scope; expose the checkout entry point explicitly.
+window.startPlanCheckout=startPlanCheckout;
+
 async function launchCashfreeCheckout(planName){
  const btns=[...document.querySelectorAll('[onclick*="startPlanCheckout"]')];btns.forEach(b=>{b.disabled=true;});
  try{const {data,error}=await db.functions.invoke('cashfree-payments',{body:{action:'create-plan-order',plan_name:planName}});if(error||!data?.success||!data.payment_session_id)throw new Error(data?.error||error?.message||'Could not create payment order.');const cashfree=await window.Cashfree({mode:data.environment==='production'?'production':'sandbox'});await cashfree.checkout({paymentSessionId:data.payment_session_id,redirectTarget:'_self'});}catch(e){alert((e?.message||'Checkout failed')+' No store access is granted unless payment is verified.');btns.forEach(b=>{b.disabled=false;});}
