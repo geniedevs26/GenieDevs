@@ -1,0 +1,8 @@
+{
+  "name": "GenieDevs",
+  "description": "Create a shareable storefront for your small business with GenieDevs. Simple catalog, mobile-first ordering, and WhatsApp-first checkout.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
