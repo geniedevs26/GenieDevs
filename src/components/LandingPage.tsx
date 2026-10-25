@@ -85,8 +85,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         });
       } else {
         setCheckoutNotice({
-          text: `Payment simulated for order ${data.order_id}. In test mode, Cashfree SDK connects upon checkout.`,
-          type: 'ok',
+          text: `Cashfree checkout could not load for order ${data.order_id}. Payment has not been completed. Please refresh the page and try again.`,
+          type: 'err',
         });
       }
     } catch (err: any) {
