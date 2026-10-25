@@ -266,10 +266,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       }
 
       const uid = data.user_id;
-      // create store
-      await supabase.functions.invoke('platform-user-management', {
+      // Create the draft store and verify the Edge Function result before reporting success.
+      const { data: storeData, error: storeError } = await supabase.functions.invoke('platform-user-management', {
         body: { action: 'create-store', user_id: uid, business_name: businessName },
       });
+
+      if (storeError || storeData?.error || !storeData?.success) {
+        throw new Error(await edgeFailureMessage(storeError, storeData));
+      }
 
       setUserActionNotice({
         text: `User and draft store created successfully for ${email}.`,
