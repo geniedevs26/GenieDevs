@@ -388,12 +388,17 @@ export const StoreFront: React.FC<StoreFrontProps> = ({ slug, onNavigate }) => {
                 }}
               />
             )}
-            <span className="eyebrow">GenieDevs storefront</span>
+            <span className="eyebrow">✦ OFFICIAL STORE · POWERED BY GENIEDEVS</span>
             <h1>{tenant.business_name}</h1>
-            <p className="muted">
-              View store contact and delivery details, choose product quantities, place WhatsApp orders, and track your
-              order below.
+            <p className="storehead-intro">
+              Discover products, choose your quantity, and place your order in a few simple steps.
+              Your store, your products, a smoother way to shop.
             </p>
+            <div className="store-benefits" aria-label="Store benefits">
+              <span>✓ Easy ordering</span>
+              <span>✓ WhatsApp checkout</span>
+              <span>✓ Order tracking</span>
+            </div>
 
             {tenant.contact_phone && (
               <p>
@@ -435,10 +440,13 @@ export const StoreFront: React.FC<StoreFrontProps> = ({ slug, onNavigate }) => {
       </section>
 
       {/* Track Order Section */}
-      <section className="sections">
-        <div className="panel">
-          <h2>Track your order</h2>
-          <p className="muted small">Enter your order reference and the phone number used at checkout.</p>
+      <section className="sections store-track-section">
+        <div className="panel store-track-panel">
+          <div className="store-section-heading">
+            <span className="store-section-kicker">ORDER UPDATES</span>
+            <h2>Track your order</h2>
+          <p className="muted small">Enter your order reference and checkout phone number to see the latest status.</p>
+          </div>
           <form onSubmit={handleTrackOrder} className="productgrid">
             <div className="field">
               <label>Order reference</label>
@@ -488,7 +496,15 @@ export const StoreFront: React.FC<StoreFrontProps> = ({ slug, onNavigate }) => {
       </section>
 
       {/* Products Grid */}
-      <section className="sections">
+      <section className="sections store-products-section">
+        <div className="store-section-heading store-products-heading">
+          <div>
+            <span className="store-section-kicker">THE COLLECTION</span>
+            <h2>Shop our products</h2>
+            <p className="muted small">Choose a product and quantity to get started.</p>
+          </div>
+          <span className="store-count">{products.length} {products.length === 1 ? 'product' : 'products'}</span>
+        </div>
         <div className="productgrid">
           {products.length > 0 ? (
             products.map((p) => {
@@ -545,8 +561,12 @@ export const StoreFront: React.FC<StoreFrontProps> = ({ slug, onNavigate }) => {
         </div>
 
         {/* Cart & WhatsApp Checkout */}
-        <div className="panel" style={{ marginTop: 22 }}>
-          <h2>Your cart</h2>
+        <div className="panel store-cart-panel" style={{ marginTop: 22 }}>
+          <div className="store-section-heading">
+            <span className="store-section-kicker">READY WHEN YOU ARE</span>
+            <h2>Your cart <span className="store-cart-count">{cart.length}</span></h2>
+            <p className="muted small">Review your items and add delivery details to send your order.</p>
+          </div>
           <div className="stack" style={{ margin: '14px 0' }}>
             {cart.length > 0 ? (
               cart.map((x) => (
