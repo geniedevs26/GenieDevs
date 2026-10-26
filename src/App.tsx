@@ -83,12 +83,12 @@ export function App() {
           } else {
             const { data: adminGrant } = await supabase
               .from('platform_admins')
-              .select('user_id')
+              .select('user_id,role')
               .eq('user_id', session.user.id)
               .eq('is_active', true)
               .maybeSingle();
 
-            if (!adminGrant) {
+            if (adminGrant?.role !== 'admin') {
               // Fail closed on protected app entry: only verified payers or explicit
               // Super Admin assignments may retain a Store Admin session.
               const { data: access, error: accessError } = await supabase.functions.invoke('cashfree-payments', {
