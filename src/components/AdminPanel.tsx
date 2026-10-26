@@ -33,6 +33,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
   // User management form state
   const [requestedEmail, setRequestedEmail] = useState('');
   const [requestedStoreName, setRequestedStoreName] = useState('');
+  const [requestedPlan, setRequestedPlan] = useState<'Basic' | 'Standard' | 'Premium'>('Basic');
   const [userActionNotice, setUserActionNotice] = useState<{ text: string; type: 'ok' | 'err' } | null>(null);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [creatingUser, setCreatingUser] = useState(false);
@@ -43,6 +44,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
   const [adminProdPrice, setAdminProdPrice] = useState('');
   const [adminProdDesc, setAdminProdDesc] = useState('');
   const [adminProdImg, setAdminProdImg] = useState('');
+  const [editingAdminProduct, setEditingAdminProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     checkAdminAuth();
@@ -108,7 +110,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
         supabase
           .from('products')
           .select(
-            'id,tenant_id,name,price,description,is_available,created_at,unit_type,unit_label,quantity_step,min_quantity'
+            'id,tenant_id,name,price,description,image_url,is_available,is_archived,created_at,unit_type,unit_label,quantity_step,min_quantity'
           )
           .order('created_at', { ascending: false })
           .limit(500),
@@ -268,7 +270,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       const uid = data.user_id;
       // Create the draft store and verify the Edge Function result before reporting success.
       const { data: storeData, error: storeError } = await supabase.functions.invoke('platform-user-management', {
-        body: { action: 'create-store', user_id: uid, business_name: businessName },
+        body: { action: 'create-store', user_id: uid, business_name: businessName, package_type: requestedPlan, product_limit: requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30 },
       });
 
       if (storeError || storeData?.error || !storeData?.success) {
@@ -281,6 +283,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       });
       setRequestedEmail('');
       setRequestedStoreName('');
+      setRequestedPlan('Basic');
       await loadAdminData(true);
     } catch (err: any) {
       setUserActionNotice({ text: err?.message || 'Creation failed.', type: 'err' });
@@ -340,6 +343,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
     setAdminProdPrice('');
     setAdminProdDesc('');
     setAdminProdImg('');
+    await loadAdminData(true);
+  };
+
+  const handleAdminEditProduct = async (product: Product) => {
+    if (adminRole !== 'admin') return;
+    const name = prompt('Product name:', product.name);
+    if (name === null) return;
+    const priceText = prompt('Price (₹):', String(product.price));
+    if (priceText === null) return;
+    const price = Number(priceText);
+    if (!name.trim() || !Number.isFinite(price) || price < 0) {
+      alert('Enter a valid product name and price.');
+      return;
+    }
+    const description = prompt('Description:', product.description || '');
+    if (description === null) return;
+    const imageUrl = prompt('Image URL (leave blank to clear):', product.image_url || '');
+    if (imageUrl === null) return;
+    const { error } = await supabase.from('products').update({
+      name: name.trim(), price, description: description.trim(), image_url: imageUrl.trim() || null,
+    }).eq('id', product.id).eq('tenant_id', product.tenant_id || '');
+    if (error) { alert('Product update failed: ' + error.message); return; }
+    await audit('admin_updated_product', 'product', product.id, { tenant_id: product.tenant_id, name: name.trim(), price });
+    await loadAdminData(true);
+  };
+
+  const handleAdminArchiveProduct = async (product: Product) => {
+    if (adminRole !== 'admin') return;
+    if (!confirm(`Archive “${product.name}”? It will be hidden from the storefront while order history is retained.`)) return;
+    const { error } = await supabase.from('products').update({ is_archived: true, is_available: false }).eq('id', product.id).eq('tenant_id', product.tenant_id || '');
+    if (error) { alert('Product archive failed: ' + error.message); return; }
+    await audit('admin_archived_product', 'product', product.id, { tenant_id: product.tenant_id, name: product.name });
     await loadAdminData(true);
   };
 
@@ -553,6 +588,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
                   onChange={(e) => setRequestedStoreName(e.target.value)}
                   required
                 />
+              </div>
+              <div className="field">
+                <label>Store plan and product allowance</label>
+                <select value={requestedPlan} onChange={(e) => setRequestedPlan(e.target.value as 'Basic' | 'Standard' | 'Premium')}>
+                  <option value="Basic">Basic — ₹999 / 5 products</option>
+                  <option value="Standard">Standard — ₹1,999 / 15 products</option>
+                  <option value="Premium">Premium — ₹3,999 / 30 products</option>
+                </select>
               </div>
               <div style={{ alignSelf: 'end' }}>
                 <button className="btn primary" type="submit" disabled={creatingUser}>
@@ -949,6 +992,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
                     <th>Price</th>
                     <th>Available</th>
                     <th>Created</th>
+                    {adminRole === 'admin' && <th>Super Admin actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -959,6 +1003,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
                       <td>₹{Number(p.price || 0).toLocaleString('en-IN')}</td>
                       <td>{p.is_available ? 'Yes' : 'No'}</td>
                       <td>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
+                      {adminRole === 'admin' && <td>
+                        <div className="actions">
+                          <button className="btn outline" onClick={() => handleAdminEditProduct(p)}>Edit</button>
+                          <button className="btn danger" onClick={() => handleAdminArchiveProduct(p)}>Archive</button>
+                        </div>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>
