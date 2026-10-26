@@ -255,7 +255,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
     }
 
     const productLimit = requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30;
-    const initialProducts = requestedProductsText.split('\\n').map((line) => line.trim()).filter(Boolean).map((line) => {
+    const initialProducts = requestedProductsText.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
       const [name = '', priceText = '', description = '', imageUrl = ''] = line.split('|').map((part) => part.trim());
       return { name, price: Number(priceText), description, image_url: imageUrl || null };
     });
@@ -263,7 +263,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       setUserActionNotice({ text: `The selected plan allows ${productLimit} products; remove extra product lines.`, type: 'err' });
       return;
     }
-    const invalidProduct = initialProducts.find((p) => !p.name || p.name.length > 120 || !Number.isFinite(p.price) || p.price < 0 || p.description.length > 500 || (p.image_url && !/^https?:\\/\\//i.test(p.image_url)));
+    const invalidProduct = initialProducts.find((p) => !p.name || p.name.length > 120 || !Number.isFinite(p.price) || p.price < 0 || p.description.length > 500 || (p.image_url && !/^https?:\/\//i.test(p.image_url)));
     if (invalidProduct) {
       setUserActionNotice({ text: 'Check initial product lines. Use: name | price | description | optional image URL.', type: 'err' });
       return;
