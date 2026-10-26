@@ -3,7 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 export const SUPABASE_URL = 'https://brjhfhehnlqkzrbkywra.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_0xA3CBSdLRlhO7Vh0F0d0g_JaoScMry';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// Keep authentication only for the current browser tab. Closing the tab ends the client session.
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    storage: window.sessionStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
 
 export interface Tenant {
   id: string;
