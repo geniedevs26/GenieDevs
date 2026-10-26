@@ -97,7 +97,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
         supabase
           .from('tenants')
           .select(
-            'id,user_id,tenant_code,package_type,product_limit,whatsapp_number,business_name,payment_id,created_at,slug,is_published,is_suspended,updated_at'
+            'id,user_id,tenant_code,package_type,product_limit,whatsapp_number,business_name,payment_id,created_at,slug,is_published,is_suspended,is_archived,updated_at'
           )
           .order('created_at', { ascending: false })
           .limit(500),
@@ -141,7 +141,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
           .limit(100),
       ]);
 
-      setTenants(tenantsR.data || []);
+      const testStoreSlugs = new Set(['satya-stores-olzj', 'prasad-stores', 'satya-stores']);
+      setTenants((tenantsR.data || []).filter((tenant) => !tenant.is_archived && !testStoreSlugs.has(tenant.slug)));
       if (tenantsR.data?.length) {
         setAdminProdStore(tenantsR.data[0].id);
       }
