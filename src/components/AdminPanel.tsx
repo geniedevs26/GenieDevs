@@ -255,7 +255,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       return;
     }
 
-    const productLimit = requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30;
+    const productLimit = requestedPlan === 'Basic' ? 6 : requestedPlan === 'Standard' ? 15 : 30;
     const initialProducts = requestedProductsText.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
       const [name = '', priceText = '', unitText = 'piece', minQtyText = '', stepText = '', description = '', imageUrl = ''] = line.split('|').map((part) => part.trim());
       const unit_type = unitText.toLowerCase() || 'piece';
@@ -300,7 +300,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       const uid = data.user_id;
       // Create the draft store and verify the Edge Function result before reporting success.
       const { data: storeData, error: storeError } = await supabase.functions.invoke('platform-user-management', {
-        body: { action: 'create-store', user_id: uid, business_name: businessName, package_type: requestedPlan, product_limit: requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30 },
+        body: { action: 'create-store', user_id: uid, business_name: businessName, package_type: requestedPlan, product_limit: requestedPlan === 'Basic' ? 6 : requestedPlan === 'Standard' ? 15 : 30 },
       });
 
       if (storeError || storeData?.error || !storeData?.success) {
@@ -527,9 +527,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       <div className="admin-head">
         <div>
           <span className="eyebrow">VERIFIED PLATFORM ACCESS · {adminRole?.toUpperCase()}</span>
-          <h1 style={{ margin: '12px 0 4px' }}>Owner Control Center</h1>
+          <h1 style={{ margin: '12px 0 4px' }}>Super Admin</h1>
           <p className="muted">
-            Manage stores, inspect merchant workspaces, troubleshoot orders and review platform records.
+            Manage users, stores, orders and payments from one place.
           </p>
         </div>
         <div className="actions">
@@ -579,25 +579,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
           className={`btn outline ${activeTab === 'users' ? 'active' : ''}`}
           onClick={() => setActiveTab('users')}
         >
-          Registered users
+          Users
         </button>
         <button
           className={`btn outline ${activeTab === 'stores' ? 'active' : ''}`}
           onClick={() => setActiveTab('stores')}
         >
-          Stores ({tenants.length})
+          Stores · {tenants.length}
         </button>
         <button
           className={`btn outline ${activeTab === 'orders' ? 'active' : ''}`}
           onClick={() => setActiveTab('orders')}
         >
-          Orders ({orders.length})
+          Orders · {orders.length}
         </button>
         <button
           className={`btn outline ${activeTab === 'products' ? 'active' : ''}`}
           onClick={() => setActiveTab('products')}
         >
-          Products ({products.length})
+          Products · {products.length}
         </button>
         <button
           className={`btn outline ${activeTab === 'payments' ? 'active' : ''}`}
@@ -615,7 +615,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
           className={`btn outline ${activeTab === 'issues' ? 'active' : ''}`}
           onClick={() => setActiveTab('issues')}
         >
-          Support / Audit
+          Audit log
         </button>
       </div>
 
@@ -663,7 +663,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
               <div className="field">
                 <label>Store plan and product allowance</label>
                 <select value={requestedPlan} onChange={(e) => setRequestedPlan(e.target.value as 'Basic' | 'Standard' | 'Premium')}>
-                  <option value="Basic">Basic — ₹999 / 5 products</option>
+                  <option value="Basic">Basic — ₹999 / 6 products</option>
                   <option value="Standard">Standard — ₹1,999 / 15 products</option>
                   <option value="Premium">Premium — ₹3,999 / 30 products</option>
                 </select>
@@ -676,7 +676,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
                   onChange={(e) => setRequestedProductsText(e.target.value)}
                   placeholder={'Name | price | unit | min quantity | quantity step | description | image URL\nRice | 75 | kg | 0.25 | 0.25 | Premium rice | https://example.com/rice.jpg\nSoap | 40 | piece | 1 | 1 | Neem soap |'}
                 />
-                <small className="muted">Format: name | price | unit | minimum quantity | quantity step | description | optional image URL. Units: piece, kg, g, litre, ml, metre, cm, hour, pack, dozen, custom. Example: Rice | 75 | kg | 0.25 | 0.25 | Premium rice |. Maximum {requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30} products.</small>
+                <small className="muted">Format: name | price | unit | minimum quantity | quantity step | description | optional image URL. Units: piece, kg, g, litre, ml, metre, cm, hour, pack, dozen, custom. Example: Rice | 75 | kg | 0.25 | 0.25 | Premium rice |. Maximum {requestedPlan === 'Basic' ? 6 : requestedPlan === 'Standard' ? 15 : 30} products.</small>
               </div>
               <div style={{ alignSelf: 'end' }}>
                 <button className="btn primary" type="submit" disabled={creatingUser}>
@@ -930,7 +930,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
                             value={o.status}
                             onChange={async (e) => {
                               const newStatus = e.target.value;
-                              await supabase.from('orders').update({ status: newStatus }).eq('id', o.id);
+                              const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', o.id);
+                              if (error) {
+                                alert('Order status update failed: ' + error.message);
+                                return;
+                              }
+                              await audit('order_status_updated', 'order', o.id, { status: newStatus });
                               setOrders((prev) =>
                                 prev.map((item) =>
                                   item.id === o.id ? { ...item, status: newStatus as any } : item
