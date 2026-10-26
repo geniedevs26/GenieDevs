@@ -433,7 +433,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onLogout }) =>
           </article>
           <article className="pricecard">
             <h3>Premium</h3>
-            <div className="price">₹2,999</div>
+            <div className="price">₹3,999</div>
             <button className="btn outline" onClick={() => onNavigate('/#pricing')}>
               View Premium
             </button>
@@ -533,7 +533,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onLogout }) =>
         <div className="feature">
           <p className="muted">Plan</p>
           <h2 style={{ margin: '8px 0' }}>{tenant.package_type || 'Custom'}</h2>
-          <p className="muted small">Product limit: {limit}</p>
+          <p className="muted small">Allowance: {limit} products</p>
+          <p className="muted small">Remaining slots: {Math.max(0, limit - activeProducts)}</p>
         </div>
       </div>
 

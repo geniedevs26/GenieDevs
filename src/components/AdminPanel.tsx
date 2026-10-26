@@ -33,6 +33,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
   // User management form state
   const [requestedEmail, setRequestedEmail] = useState('');
   const [requestedStoreName, setRequestedStoreName] = useState('');
+  const [requestedPlan, setRequestedPlan] = useState<'Basic' | 'Standard' | 'Premium'>('Basic');
+  const [requestedProductsText, setRequestedProductsText] = useState('');
   const [userActionNotice, setUserActionNotice] = useState<{ text: string; type: 'ok' | 'err' } | null>(null);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [creatingUser, setCreatingUser] = useState(false);
@@ -43,6 +45,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
   const [adminProdPrice, setAdminProdPrice] = useState('');
   const [adminProdDesc, setAdminProdDesc] = useState('');
   const [adminProdImg, setAdminProdImg] = useState('');
+  const [editingAdminProduct, setEditingAdminProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     checkAdminAuth();
@@ -94,7 +97,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
         supabase
           .from('tenants')
           .select(
-            'id,user_id,tenant_code,package_type,product_limit,whatsapp_number,business_name,payment_id,created_at,slug,is_published,is_suspended,updated_at'
+            'id,user_id,tenant_code,package_type,product_limit,whatsapp_number,business_name,payment_id,created_at,slug,is_published,is_suspended,is_archived,updated_at'
           )
           .order('created_at', { ascending: false })
           .limit(500),
@@ -108,7 +111,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
         supabase
           .from('products')
           .select(
-            'id,tenant_id,name,price,description,is_available,created_at,unit_type,unit_label,quantity_step,min_quantity'
+            'id,tenant_id,name,price,description,image_url,is_available,is_archived,created_at,unit_type,unit_label,quantity_step,min_quantity'
           )
           .order('created_at', { ascending: false })
           .limit(500),
@@ -138,7 +141,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
           .limit(100),
       ]);
 
-      setTenants(tenantsR.data || []);
+      const testStoreSlugs = new Set(['satya-stores-olzj', 'prasad-stores', 'satya-stores']);
+      setTenants((tenantsR.data || []).filter((tenant) => !tenant.is_archived && !testStoreSlugs.has(tenant.slug)));
       if (tenantsR.data?.length) {
         setAdminProdStore(tenantsR.data[0].id);
       }
@@ -251,7 +255,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       return;
     }
 
-    if (!confirm(`Approve ${email} and create draft store for ${businessName}?`)) return;
+    const productLimit = requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30;
+    const initialProducts = requestedProductsText.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
+      const [name = '', priceText = '', description = '', imageUrl = ''] = line.split('|').map((part) => part.trim());
+      return { name, price: Number(priceText), description, image_url: imageUrl || null };
+    });
+    if (initialProducts.length > productLimit) {
+      setUserActionNotice({ text: `The selected plan allows ${productLimit} products; remove extra product lines.`, type: 'err' });
+      return;
+    }
+    const invalidProduct = initialProducts.find((p) => !p.name || p.name.length > 120 || !Number.isFinite(p.price) || p.price < 0 || p.description.length > 500 || (p.image_url && !/^https?:\/\//i.test(p.image_url)));
+    if (invalidProduct) {
+      setUserActionNotice({ text: 'Check initial product lines. Use: name | price | description | optional image URL.', type: 'err' });
+      return;
+    }
+
+    if (!confirm(`Approve ${email} and create draft store for ${businessName} with ${initialProducts.length} initial products on the ${requestedPlan} plan?`)) return;
 
     setCreatingUser(true);
     setUserActionNotice(null);
@@ -268,19 +287,61 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
       const uid = data.user_id;
       // Create the draft store and verify the Edge Function result before reporting success.
       const { data: storeData, error: storeError } = await supabase.functions.invoke('platform-user-management', {
-        body: { action: 'create-store', user_id: uid, business_name: businessName },
+        body: { action: 'create-store', user_id: uid, business_name: businessName, package_type: requestedPlan, product_limit: requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30 },
       });
 
       if (storeError || storeData?.error || !storeData?.success) {
         throw new Error(await edgeFailureMessage(storeError, storeData));
       }
 
+      const { data: createdTenant, error: tenantLookupError } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (tenantLookupError || !createdTenant?.id) {
+        throw new Error('Store was created, but its ID could not be loaded. Refresh the Stores tab and verify the account.');
+      }
+
+      const { error: planError } = await supabase.rpc('admin_assign_tenant_plan', {
+        p_tenant_id: createdTenant.id,
+        p_package_type: requestedPlan,
+      });
+      if (planError) {
+        throw new Error('Store was created, but plan assignment failed: ' + planError.message);
+      }
+
+      if (initialProducts.length) {
+        const { error: initialProductsError } = await supabase.from('products').insert(
+          initialProducts.map((p) => ({
+            tenant_id: createdTenant.id,
+            name: p.name,
+            price: p.price,
+            description: p.description,
+            image_url: p.image_url,
+            unit_type: 'piece',
+            unit_label: 'piece',
+            min_quantity: 1,
+            quantity_step: 1,
+            is_available: true,
+          }))
+        );
+        if (initialProductsError) {
+          throw new Error('Store and plan were created, but initial products could not be added: ' + initialProductsError.message);
+        }
+        await audit('admin_created_store_with_products', 'tenant', createdTenant.id, { package_type: requestedPlan, product_limit: productLimit, product_count: initialProducts.length });
+      } else {
+        await audit('admin_created_store', 'tenant', createdTenant.id, { package_type: requestedPlan, product_limit: productLimit, product_count: 0 });
+      }
+
       setUserActionNotice({
-        text: `User and draft store created successfully for ${email}.`,
+        text: `User, draft store and ${initialProducts.length} initial product(s) created successfully for ${email}. Plan: ${requestedPlan} (${productLimit} products).`,
         type: 'ok',
       });
       setRequestedEmail('');
       setRequestedStoreName('');
+      setRequestedProductsText('');
+      setRequestedPlan('Basic');
       await loadAdminData(true);
     } catch (err: any) {
       setUserActionNotice({ text: err?.message || 'Creation failed.', type: 'err' });
@@ -340,6 +401,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
     setAdminProdPrice('');
     setAdminProdDesc('');
     setAdminProdImg('');
+    await loadAdminData(true);
+  };
+
+  const handleAdminEditProduct = async (product: Product) => {
+    if (adminRole !== 'admin') return;
+    const name = prompt('Product name:', product.name);
+    if (name === null) return;
+    const priceText = prompt('Price (₹):', String(product.price));
+    if (priceText === null) return;
+    const price = Number(priceText);
+    if (!name.trim() || !Number.isFinite(price) || price < 0) {
+      alert('Enter a valid product name and price.');
+      return;
+    }
+    const description = prompt('Description:', product.description || '');
+    if (description === null) return;
+    const imageUrl = prompt('Image URL (leave blank to clear):', product.image_url || '');
+    if (imageUrl === null) return;
+    const { error } = await supabase.from('products').update({
+      name: name.trim(), price, description: description.trim(), image_url: imageUrl.trim() || null,
+    }).eq('id', product.id).eq('tenant_id', product.tenant_id || '');
+    if (error) { alert('Product update failed: ' + error.message); return; }
+    await audit('admin_updated_product', 'product', product.id, { tenant_id: product.tenant_id, name: name.trim(), price });
+    await loadAdminData(true);
+  };
+
+  const handleAdminArchiveProduct = async (product: Product) => {
+    if (adminRole !== 'admin') return;
+    if (!confirm(`Archive “${product.name}”? It will be hidden from the storefront while order history is retained.`)) return;
+    const { error } = await supabase.from('products').update({ is_archived: true, is_available: false }).eq('id', product.id).eq('tenant_id', product.tenant_id || '');
+    if (error) { alert('Product archive failed: ' + error.message); return; }
+    await audit('admin_archived_product', 'product', product.id, { tenant_id: product.tenant_id, name: product.name });
     await loadAdminData(true);
   };
 
@@ -553,6 +646,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
                   onChange={(e) => setRequestedStoreName(e.target.value)}
                   required
                 />
+              </div>
+              <div className="field">
+                <label>Store plan and product allowance</label>
+                <select value={requestedPlan} onChange={(e) => setRequestedPlan(e.target.value as 'Basic' | 'Standard' | 'Premium')}>
+                  <option value="Basic">Basic — ₹999 / 5 products</option>
+                  <option value="Standard">Standard — ₹1,999 / 15 products</option>
+                  <option value="Premium">Premium — ₹3,999 / 30 products</option>
+                </select>
+              </div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
+                <label>Initial products (optional, one per line)</label>
+                <textarea
+                  rows={4}
+                  value={requestedProductsText}
+                  onChange={(e) => setRequestedProductsText(e.target.value)}
+                  placeholder={'Product name | price | description | image URL\nExample: Handmade Soap | 199 | Neem soap | https://example.com/soap.jpg'}
+                />
+                <small className="muted">Format: name | price | description | image URL. Maximum {requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30} products for this plan.</small>
               </div>
               <div style={{ alignSelf: 'end' }}>
                 <button className="btn primary" type="submit" disabled={creatingUser}>
@@ -949,6 +1060,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
                     <th>Price</th>
                     <th>Available</th>
                     <th>Created</th>
+                    {adminRole === 'admin' && <th>Super Admin actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -959,6 +1071,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
                       <td>₹{Number(p.price || 0).toLocaleString('en-IN')}</td>
                       <td>{p.is_available ? 'Yes' : 'No'}</td>
                       <td>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
+                      {adminRole === 'admin' && <td>
+                        <div className="actions">
+                          <button className="btn outline" onClick={() => handleAdminEditProduct(p)}>Edit</button>
+                          <button className="btn danger" onClick={() => handleAdminArchiveProduct(p)}>Archive</button>
+                        </div>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>

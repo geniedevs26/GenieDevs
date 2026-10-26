@@ -50,10 +50,12 @@ export const StoreFront: React.FC<StoreFrontProps> = ({ slug, onNavigate }) => {
       const { data: t, error: tErr } = await supabase
         .from('tenants')
         .select(
-          'id,business_name,slug,whatsapp_number,contact_phone,store_address,delivery_mode,delivery_areas,logo_url,is_published'
+          'id,business_name,slug,whatsapp_number,contact_phone,store_address,delivery_mode,delivery_areas,logo_url,is_published,is_suspended,is_archived'
         )
         .eq('slug', slug)
         .eq('is_published', true)
+        .eq('is_suspended', false)
+        .eq('is_archived', false)
         .maybeSingle();
 
       if (tErr || !t) {
