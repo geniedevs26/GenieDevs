@@ -342,9 +342,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
         if (initialProductsError) {
           throw new Error('Store and plan were created, but initial products could not be added: ' + initialProductsError.message);
         }
-        await audit('admin_created_store_with_products', 'tenant', createdTenant.id, { package_type: requestedPlan, product_limit: productLimit, product_count: initialProducts.length });
+        await audit('admin_created_store_with_products', 'tenant', createdTenant.id, { user_id: uid, package_type: requestedPlan, product_limit: productLimit, product_count: initialProducts.length });
       } else {
-        await audit('admin_created_store', 'tenant', createdTenant.id, { package_type: requestedPlan, product_limit: productLimit, product_count: 0 });
+        await audit('admin_created_store', 'tenant', createdTenant.id, { user_id: uid, package_type: requestedPlan, product_limit: productLimit, product_count: 0 });
       }
 
       setUserActionNotice({
