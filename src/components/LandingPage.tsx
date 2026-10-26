@@ -14,7 +14,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
   const planAmounts: Record<string, number> = {
     Basic: 999,
     Standard: 1999,
-    Premium: 3999,
+    Premium: 2999,
   };
 
   const handleStartCheckout = async (planName: string) => {
@@ -340,7 +340,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             <div className="price">₹999</div>
             <p className="muted">For a small catalog</p>
             <ul>
-              <li>Up to 10 active products</li>
+              <li>Up to 6 active products</li>
               <li>Unavailable products remain saved</li>
               <li>Store URL and WhatsApp-first ordering setup</li>
               <li>Core catalog setup scope</li>
@@ -356,7 +356,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             <div className="price">₹1,999</div>
             <p className="muted">For growing product catalogs</p>
             <ul>
-              <li>Up to 25 active products</li>
+              <li>Up to 15 active products</li>
               <li>Unavailable products remain saved</li>
               <li>Store URL and WhatsApp-first ordering setup</li>
               <li>Expanded catalog setup scope</li>
@@ -371,7 +371,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             <div className="price">₹2,999</div>
             <p className="muted">For larger catalogs</p>
             <ul>
-              <li>Up to 50 active products</li>
+              <li>Up to 30 active products</li>
               <li>Unavailable products remain saved</li>
               <li>Store URL and WhatsApp-first ordering setup</li>
               <li>Largest catalog setup scope</li>
@@ -492,9 +492,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                 <label htmlFor="supportPackage">Package (optional)</label>
                 <select id="supportPackage" name="package" defaultValue="">
                   <option value="">Not decided yet</option>
-                  <option>Basic — proposed ₹999</option>
-                  <option>Standard — proposed ₹1,999</option>
-                  <option>Premium — proposed ₹2,999</option>
+                  <option>Basic — ₹999</option>
+                  <option>Standard — ₹1,999</option>
+                  <option>Premium — ₹2,999</option>
                   <option>Custom requirements</option>
                 </select>
               </div>
