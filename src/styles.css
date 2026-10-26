@@ -1357,3 +1357,148 @@ table.admin-table td {
     padding: 14px;
   }
 }
+
+
+/* Storefront polish — clear hierarchy, richer product cards, mobile-first ordering */
+.storehead {
+  position: relative;
+  margin: 24px 0 12px;
+  padding: clamp(26px, 5vw, 48px);
+  border: 1px solid rgba(139, 123, 255, 0.24);
+  border-radius: 26px;
+  background:
+    radial-gradient(ellipse at 92% 5%, rgba(99, 226, 210, 0.14), transparent 36%),
+    radial-gradient(ellipse at 6% 100%, rgba(139, 123, 255, 0.19), transparent 45%),
+    linear-gradient(145deg, rgba(20, 31, 55, 0.96), rgba(10, 17, 32, 0.98));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.storehead h1 {
+  max-width: 850px;
+  font-size: clamp(2.1rem, 5vw, 3.7rem);
+  line-height: 1.04;
+  letter-spacing: -1.8px;
+  overflow-wrap: anywhere;
+}
+.storehead p {
+  max-width: 760px;
+  line-height: 1.75;
+}
+.storehead a:not(.btn) {
+  color: #9cefe2;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.storehead .toolbar {
+  align-items: flex-start;
+}
+main.wrap > .sections:has(.productgrid) {
+  padding-top: 24px;
+}
+main.wrap > .sections:has(.productgrid) > .productgrid {
+  align-items: stretch;
+  gap: 20px;
+}
+.productgrid > .product {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border-radius: 20px;
+  border-color: rgba(151, 164, 207, 0.18);
+  background: linear-gradient(155deg, rgba(23, 34, 58, 0.98), rgba(13, 22, 39, 0.99));
+  padding: 18px;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.productgrid > .product:hover {
+  transform: translateY(-4px);
+  border-color: rgba(139, 123, 255, 0.5);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.2);
+}
+.productgrid > .product img {
+  height: 210px;
+  border-radius: 14px;
+  background: #eef1fb;
+}
+.productgrid > .product h3 {
+  font-size: 1.08rem;
+  line-height: 1.35;
+}
+.productgrid > .product .price {
+  font-size: 1.35rem;
+  line-height: 1.25;
+  color: #a9a0ff;
+  margin: 5px 0;
+  overflow-wrap: anywhere;
+}
+.productgrid > .product .field {
+  margin: 5px 0;
+}
+.productgrid > .product .row {
+  gap: 6px;
+}
+.productgrid > .product .btn.primary {
+  width: 100%;
+  margin-top: auto;
+  min-height: 44px;
+}
+.productgrid > .product .btn.outline {
+  min-height: 36px;
+  padding: 7px 10px;
+}
+main.wrap > .sections > .panel {
+  border-radius: 22px;
+  border-color: rgba(151, 164, 207, 0.18);
+}
+main.wrap > .sections > .panel h2 {
+  letter-spacing: -.6px;
+}
+main.wrap > .sections > .panel .productgrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+}
+main.wrap > .sections > .panel .toolbar {
+  gap: 14px;
+}
+main.wrap > .sections > .panel .toolbar > span:first-child {
+  overflow-wrap: anywhere;
+}
+main.wrap > .sections > .panel .field input,
+main.wrap > .sections > .panel .field textarea {
+  min-height: 44px;
+}
+body[data-theme="light"] .storehead {
+  background:
+    radial-gradient(ellipse at 92% 5%, rgba(99, 196, 184, 0.16), transparent 36%),
+    radial-gradient(ellipse at 6% 100%, rgba(139, 123, 255, 0.14), transparent 45%),
+    linear-gradient(145deg, #fff, #f4f6ff);
+  border-color: #dce2f4;
+  box-shadow: 0 24px 65px rgba(27, 43, 80, 0.07);
+}
+body[data-theme="light"] .storehead a:not(.btn) {
+  color: #286b66;
+}
+body[data-theme="light"] .productgrid > .product {
+  background: linear-gradient(155deg, #fff, #f8f9ff);
+  border-color: #e0e5f1;
+  box-shadow: 0 10px 28px rgba(27, 43, 80, 0.045);
+}
+body[data-theme="light"] .productgrid > .product .price {
+  color: #5a4bd7;
+}
+@media (max-width: 800px) {
+  .storehead {
+    margin-top: 14px;
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+  .storehead h1 {
+    letter-spacing: -1px;
+  }
+  main.wrap > .sections > .panel .productgrid {
+    grid-template-columns: 1fr;
+  }
+  .productgrid > .product img {
+    height: 230px;
+  }
+}
