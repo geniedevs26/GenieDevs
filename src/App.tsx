@@ -81,6 +81,31 @@ export function App() {
             if (!mounted) return;
             setUserEmail(null);
           } else {
+            const { data: adminGrant } = await supabase
+              .from('platform_admins')
+              .select('user_id')
+              .eq('user_id', session.user.id)
+              .eq('is_active', true)
+              .maybeSingle();
+
+            if (!adminGrant) {
+              // Fail closed on protected app entry: only verified payers or explicit
+              // Super Admin assignments may retain a Store Admin session.
+              const { data: access, error: accessError } = await supabase.functions.invoke('cashfree-payments', {
+                body: { action: 'check-store-access' },
+              });
+              if (accessError || !access?.success || access.suspended || (!access.paid && !access.admin_assigned)) {
+                await supabase.auth.signOut();
+                if (!mounted) return;
+                setUserEmail(null);
+                const path = window.location.pathname.replace(/\\/+$/, '') || '/';
+                if (path === '/dashboard' || path === '/admin') {
+                  window.history.replaceState({}, '', '/login');
+                  setCurrentRoute('/login');
+                }
+                return;
+              }
+            }
             setUserEmail(session.user.email || null);
             lastActivityRef.current = Date.now();
           }
