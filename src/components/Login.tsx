@@ -38,20 +38,39 @@ export const Login: React.FC<LoginProps> = ({ onNavigate, onLoginSuccess }) => {
       return;
     }
 
-    // Check if user is already logged in
+    // Existing sessions must pass the same authorization gate as fresh logins.
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
-      const { data: grant } = await supabase
+      const { data: grant, error: grantError } = await supabase
         .from('platform_admins')
         .select('user_id,is_active')
         .eq('user_id', session.user.id)
         .eq('is_active', true)
         .maybeSingle();
 
-      if (grant && !params.get('store')) {
+      if (!grantError && grant) {
         onNavigate('/admin');
-      } else {
+        return;
+      }
+
+      const { data: access, error: accessError } = await supabase.functions.invoke('cashfree-payments', {
+        body: { action: 'check-store-access' },
+      });
+      if (accessError || !access?.success) {
+        await supabase.auth.signOut();
+        setNotice({ text: 'Store access could not be verified. Please try again after payment verification or contact Super Admin.', type: 'err' });
+        return;
+      }
+      if (access.suspended) {
+        await supabase.auth.signOut();
+        setNotice({ text: 'This store is suspended. Please contact Super Admin.', type: 'err' });
+        return;
+      }
+      if (access.paid || access.admin_assigned) {
         onLoginSuccess();
+      } else {
+        await supabase.auth.signOut();
+        setNotice({ text: 'Store Admin login is available only after a verified package payment or direct approval by Super Admin. Choose a package or submit a store access request.', type: 'err' });
       }
     }
   };
@@ -76,19 +95,39 @@ export const Login: React.FC<LoginProps> = ({ onNavigate, onLoginSuccess }) => {
       }
 
       if (data?.user) {
-        const { data: grant } = await supabase
+        const { data: grant, error: grantError } = await supabase
           .from('platform_admins')
           .select('user_id,is_active')
           .eq('user_id', data.user.id)
           .eq('is_active', true)
           .maybeSingle();
 
-        const params = new URLSearchParams(window.location.search);
-        if (grant && !params.get('store')) {
+        // Super Admin is allowed in directly; all other accounts need verified payment
+        // or an explicit store assignment recorded by Super Admin.
+        if (!grantError && grant) {
           onNavigate('/admin');
-        } else {
-          onLoginSuccess();
+          return;
         }
+
+        const { data: access, error: accessError } = await supabase.functions.invoke('cashfree-payments', {
+          body: { action: 'check-store-access' },
+        });
+        if (accessError || !access?.success) {
+          await supabase.auth.signOut();
+          setNotice({ text: 'Store access could not be verified. Please try again or contact Super Admin.', type: 'err' });
+          return;
+        }
+        if (access.suspended) {
+          await supabase.auth.signOut();
+          setNotice({ text: 'This store is suspended. Please contact Super Admin.', type: 'err' });
+          return;
+        }
+        if (!access.paid && !access.admin_assigned) {
+          await supabase.auth.signOut();
+          setNotice({ text: 'Login is restricted to customers with a verified package payment. If Super Admin has approved your request, please contact support to verify the assignment.', type: 'err' });
+          return;
+        }
+        onLoginSuccess();
       }
     } catch (err: any) {
       setNotice({ text: err?.message || 'Login failed.', type: 'err' });
