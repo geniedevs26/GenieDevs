@@ -43,12 +43,12 @@ export const Login: React.FC<LoginProps> = ({ onNavigate, onLoginSuccess }) => {
     if (session?.user) {
       const { data: grant, error: grantError } = await supabase
         .from('platform_admins')
-        .select('user_id,is_active')
+        .select('user_id,role,is_active')
         .eq('user_id', session.user.id)
         .eq('is_active', true)
         .maybeSingle();
 
-      if (!grantError && grant) {
+      if (!grantError && grant?.role === 'admin') {
         onNavigate('/admin');
         return;
       }
