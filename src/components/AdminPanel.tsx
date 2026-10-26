@@ -257,16 +257,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
 
     const productLimit = requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30;
     const initialProducts = requestedProductsText.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
-      const [name = '', priceText = '', description = '', imageUrl = ''] = line.split('|').map((part) => part.trim());
-      return { name, price: Number(priceText), description, image_url: imageUrl || null };
+      const [name = '', priceText = '', unitText = 'piece', minQtyText = '', stepText = '', description = '', imageUrl = ''] = line.split('|').map((part) => part.trim());
+      const unit_type = unitText.toLowerCase() || 'piece';
+      const defaultQty = unit_type === 'kg' || unit_type === 'litre' ? 0.25 : unit_type === 'g' || unit_type === 'ml' ? 100 : 1;
+      const min_quantity = minQtyText ? Number(minQtyText) : defaultQty;
+      const quantity_step = stepText ? Number(stepText) : defaultQty;
+      return { name, price: Number(priceText), unit_type, unit_label: unit_type, min_quantity, quantity_step, description, image_url: imageUrl || null };
     });
     if (initialProducts.length > productLimit) {
       setUserActionNotice({ text: `The selected plan allows ${productLimit} products; remove extra product lines.`, type: 'err' });
       return;
     }
-    const invalidProduct = initialProducts.find((p) => !p.name || p.name.length > 120 || !Number.isFinite(p.price) || p.price < 0 || p.description.length > 500 || (p.image_url && !/^https?:\/\//i.test(p.image_url)));
+    const allowedUnits = new Set(['piece', 'kg', 'g', 'litre', 'ml', 'metre', 'cm', 'hour', 'pack', 'dozen', 'custom']);
+    const invalidProduct = initialProducts.find((p) =>
+      !p.name || p.name.length > 120 ||
+      !Number.isFinite(p.price) || p.price < 0 ||
+      !allowedUnits.has(p.unit_type) ||
+      !Number.isFinite(p.min_quantity) || p.min_quantity <= 0 ||
+      !Number.isFinite(p.quantity_step) || p.quantity_step <= 0 ||
+      p.description.length > 500 ||
+      (p.image_url && !/^https?:\/\//i.test(p.image_url))
+    );
     if (invalidProduct) {
-      setUserActionNotice({ text: 'Check initial product lines. Use: name | price | description | optional image URL.', type: 'err' });
+      setUserActionNotice({ text: 'Check each product line. Use: name | price | unit | minimum quantity | quantity step | description | optional image URL. Unit must be piece, kg, g, litre, ml, metre, cm, hour, pack, dozen or custom; quantities must be positive.', type: 'err' });
       return;
     }
 
@@ -319,10 +332,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
             price: p.price,
             description: p.description,
             image_url: p.image_url,
-            unit_type: 'piece',
-            unit_label: 'piece',
-            min_quantity: 1,
-            quantity_step: 1,
+            unit_type: p.unit_type,
+            unit_label: p.unit_label,
+            min_quantity: p.min_quantity,
+            quantity_step: p.quantity_step,
             is_available: true,
           }))
         );
@@ -658,12 +671,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
               <div className="field" style={{ gridColumn: '1 / -1' }}>
                 <label>Initial products (optional, one per line)</label>
                 <textarea
-                  rows={4}
+                  rows={5}
                   value={requestedProductsText}
                   onChange={(e) => setRequestedProductsText(e.target.value)}
-                  placeholder={'Product name | price | description | image URL\nExample: Handmade Soap | 199 | Neem soap | https://example.com/soap.jpg'}
+                  placeholder={'Name | price | unit | min quantity | quantity step | description | image URL\nRice | 75 | kg | 0.25 | 0.25 | Premium rice | https://example.com/rice.jpg\nSoap | 40 | piece | 1 | 1 | Neem soap |'}
                 />
-                <small className="muted">Format: name | price | description | image URL. Maximum {requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30} products for this plan.</small>
+                <small className="muted">Format: name | price | unit | minimum quantity | quantity step | description | optional image URL. Units: piece, kg, g, litre, ml, metre, cm, hour, pack, dozen, custom. Example: Rice | 75 | kg | 0.25 | 0.25 | Premium rice |. Maximum {requestedPlan === 'Basic' ? 5 : requestedPlan === 'Standard' ? 15 : 30} products.</small>
               </div>
               <div style={{ alignSelf: 'end' }}>
                 <button className="btn primary" type="submit" disabled={creatingUser}>
