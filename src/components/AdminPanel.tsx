@@ -293,15 +293,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
         throw new Error(await edgeFailureMessage(storeError, storeData));
       }
 
+      const { data: createdTenant, error: tenantLookupError } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (tenantLookupError || !createdTenant?.id) {
+        throw new Error('Store was created, but its ID could not be loaded. Refresh the Stores tab and verify the account.');
+      }
+
+      const { error: planError } = await supabase.rpc('admin_assign_tenant_plan', {
+        p_tenant_id: createdTenant.id,
+        p_package_type: requestedPlan,
+      });
+      if (planError) {
+        throw new Error('Store was created, but plan assignment failed: ' + planError.message);
+      }
+
       if (initialProducts.length) {
-        const { data: createdTenant, error: tenantLookupError } = await supabase
-          .from('tenants')
-          .select('id')
-          .eq('user_id', uid)
-          .maybeSingle();
-        if (tenantLookupError || !createdTenant?.id) {
-          throw new Error('Store was created, but its ID could not be loaded to add initial products. Use Products tab to add them.');
-        }
         const { error: initialProductsError } = await supabase.from('products').insert(
           initialProducts.map((p) => ({
             tenant_id: createdTenant.id,
@@ -317,9 +326,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onNavigate }) => {
           }))
         );
         if (initialProductsError) {
-          throw new Error('Store was created, but initial products could not be added: ' + initialProductsError.message);
+          throw new Error('Store and plan were created, but initial products could not be added: ' + initialProductsError.message);
         }
-        await audit('admin_created_store_with_products', 'tenant', createdTenant.id, { package_type: requestedPlan, product_count: initialProducts.length });
+        await audit('admin_created_store_with_products', 'tenant', createdTenant.id, { package_type: requestedPlan, product_limit: productLimit, product_count: initialProducts.length });
+      } else {
+        await audit('admin_created_store', 'tenant', createdTenant.id, { package_type: requestedPlan, product_limit: productLimit, product_count: 0 });
       }
 
       setUserActionNotice({
