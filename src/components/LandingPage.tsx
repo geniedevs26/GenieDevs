@@ -14,7 +14,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
   const planAmounts: Record<string, number> = {
     Basic: 999,
     Standard: 1999,
-    Premium: 2999,
+    Premium: 3999,
   };
 
   const handleStartCheckout = async (planName: string) => {
