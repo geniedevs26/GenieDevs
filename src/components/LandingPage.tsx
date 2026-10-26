@@ -368,7 +368,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
 
           <article className="pricecard">
             <h3>Premium</h3>
-            <div className="price">₹2,999</div>
+            <div className="price">₹3,999</div>
             <p className="muted">For larger catalogs</p>
             <ul>
               <li>Up to 50 active products</li>
@@ -378,7 +378,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               <li>Priority setup coordination</li>
             </ul>
             <button className="btn outline" type="button" onClick={() => handleStartCheckout('Premium')}>
-              Pay Premium · ₹2,999
+              Pay Premium · ₹3,999
             </button>
           </article>
         </div>
@@ -494,7 +494,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                   <option value="">Not decided yet</option>
                   <option>Basic — proposed ₹999</option>
                   <option>Standard — proposed ₹1,999</option>
-                  <option>Premium — proposed ₹2,999</option>
+                  <option>Premium — proposed ₹3,999</option>
                   <option>Custom requirements</option>
                 </select>
               </div>
