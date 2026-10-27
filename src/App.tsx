@@ -100,7 +100,7 @@ export function App() {
                 await supabase.auth.signOut();
                 if (!mounted) return;
                 setUserEmail(null);
-                const path = window.location.pathname.replace(/\\/+$/, '') || '/';
+                const path = window.location.pathname.replace(/\/+$/, '') || '/';
                 if (path === '/dashboard' || path === '/admin') {
                   window.history.replaceState({}, '', '/login');
                   setCurrentRoute('/login');
@@ -217,6 +217,7 @@ export function App() {
   };
 
   const renderContent = () => {
+    if (guestReturnOrderId) return <GuestPaymentReturn orderId={guestReturnOrderId} onNavigate={navigateTo} />;
     const cleanPath = decodeURIComponent(currentRoute).replace(/\/+$/, '') || '/';
     if ((cleanPath === '/dashboard' || cleanPath === '/admin') && (authLoading || !userEmail)) {
       return <section className="panel center" style={{ maxWidth: 520 }}><p className="muted">Checking secure session…</p></section>;
