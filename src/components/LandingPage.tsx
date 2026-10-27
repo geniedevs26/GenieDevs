@@ -166,7 +166,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                   minLength={10}
                   maxLength={10}
                   value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value.replace(/\\D/g, '').slice(0, 10))}
+                  onChange={(e) => setGuestPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="10-digit mobile number"
                   aria-describedby="guest-phone-help"
                 />
