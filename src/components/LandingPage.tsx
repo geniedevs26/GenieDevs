@@ -8,6 +8,7 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
   const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
   const [guestEmail, setGuestEmail] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutNotice, setCheckoutNotice] = useState<{ text: string; type: 'ok' | 'err' | '' } | null>(null);
 
@@ -60,8 +61,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
 
     try {
       const email = guestEmail.trim().toLowerCase();
+      const phone = guestPhone.replace(/\D/g, '').slice(-10);
+      if (!/^\d{10}$/.test(phone)) throw new Error('Enter a valid 10-digit Indian mobile number.');
       const { data, error } = await supabase.functions.invoke('cashfree-payments', {
-        body: { action: 'create-guest-order', email, plan_name: checkoutPlan },
+        body: { action: 'create-guest-order', email, phone, plan_name: checkoutPlan },
       });
       if (error || !data?.success || !data.payment_session_id || !data.order_id || !data.claim_secret) {
         throw new Error(data?.error || error?.message || 'Could not prepare payment.');
@@ -152,6 +155,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                   onChange={(e) => setGuestEmail(e.target.value)}
                   placeholder="name@business.com"
                   autoComplete="email"
+                />
+              </div>
+              <div className="field">
+                <label>Mobile number (India)</label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  required
+                  minLength={10}
+                  maxLength={14}
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="10-digit mobile number"
                 />
               </div>
               <button
