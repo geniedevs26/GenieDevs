@@ -8,6 +8,7 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
   const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
   const [guestEmail, setGuestEmail] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutNotice, setCheckoutNotice] = useState<{ text: string; type: 'ok' | 'err' | '' } | null>(null);
 
@@ -61,7 +62,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
     try {
       const email = guestEmail.trim().toLowerCase();
       const { data, error } = await supabase.functions.invoke('cashfree-payments', {
-        body: { action: 'create-guest-order', email, plan_name: checkoutPlan },
+        body: { action: 'create-guest-order', email, phone: guestPhone.trim(), plan_name: checkoutPlan },
       });
       if (error || !data?.success || !data.payment_session_id || !data.order_id || !data.claim_secret) {
         throw new Error(data?.error || error?.message || 'Could not prepare payment.');
@@ -153,6 +154,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                   placeholder="name@business.com"
                   autoComplete="email"
                 />
+              </div>
+              <div className="field">
+                <label>Mobile number</label>
+                <input
+                  type="tel"
+                  required
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  pattern="[6-9][0-9]{9}"
+                  minLength={10}
+                  maxLength={10}
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value.replace(/\\D/g, '').slice(0, 10))}
+                  placeholder="10-digit mobile number"
+                  aria-describedby="guest-phone-help"
+                />
+                <small id="guest-phone-help" className="muted">Enter an Indian mobile number for payment verification.</small>
               </div>
               <button
                 className="btn primary"
