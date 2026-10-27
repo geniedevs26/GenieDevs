@@ -8,6 +8,7 @@ import { StoreFront } from './components/StoreFront';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { AdminPanel } from './components/AdminPanel';
+import { GuestPaymentReturn } from './components/GuestPaymentReturn';
 
 const IDLE_TIMEOUT_MS = 3 * 60 * 1000;
 const MAX_SESSION_AGE_MS = 8 * 60 * 60 * 1000;
@@ -25,6 +26,7 @@ export function App() {
   const [currentRoute, setCurrentRoute] = useState<string>(() => window.location.pathname);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [guestReturnOrderId, setGuestReturnOrderId] = useState<string | null>(null);
   const lastActivityRef = useRef(Date.now());
   const expiringRef = useRef(false);
 
@@ -179,7 +181,7 @@ export function App() {
 
   const handleCashfreeReturn = async (orderId: string, isGuest: boolean) => {
     if (isGuest) {
-      alert(`Payment return received for guest order ${orderId}. Checking verification…`);
+      setGuestReturnOrderId(orderId);
       return;
     }
     try {
